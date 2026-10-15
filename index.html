@@ -7,9 +7,29 @@
     <link rel="icon" href="data:," />
     <title>白相 · White Atelier</title>
     <link rel="stylesheet" href="./style.css" />
-    <script type="module" src="./app.bundle.v3.js"></script>
   </head>
   <body>
+    <div class="gate" id="gate">
+      <style>
+        .gate{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:radial-gradient(120% 120% at 50% 0%,#20242e 0%,#101216 62%,#0a0b0e 100%);transition:opacity .5s ease,visibility .5s ease;font-family:ui-sans-serif,system-ui,"PingFang SC","Microsoft YaHei",sans-serif}.gate.gate-open{opacity:0;visibility:hidden;pointer-events:none}.gate-box{width:min(88vw,340px);text-align:center;color:#f4f1e8;padding:34px 30px 30px;border:1px solid rgba(255,255,255,.14);border-radius:16px;background:rgba(255,255,255,.05);box-shadow:0 24px 60px rgba(0,0,0,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}.gate-mark{font-size:12px;letter-spacing:.32em;color:rgba(244,241,232,.55);margin:0 0 14px}.gate-title{font-size:26px;font-weight:700;margin:0 0 6px;letter-spacing:.14em}.gate-hint{font-size:13px;color:rgba(244,241,232,.6);margin:0 0 22px}.gate-input{display:block;box-sizing:border-box;width:100%;padding:11px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#f4f1e8;font-size:16px;text-align:center;outline:none;transition:border-color .2s ease}.gate-input:focus{border-color:rgba(255,255,255,.55)}.gate-btn{display:block;box-sizing:border-box;width:100%;margin-top:14px;padding:11px 0;border:none;border-radius:10px;background:#e8e2d0;color:#15171c;font-size:15px;font-weight:600;letter-spacing:.22em;cursor:pointer;transition:filter .2s ease,transform .12s ease}.gate-btn:active{transform:scale(.98)}.gate-btn:hover{filter:brightness(1.06)}.gate-msg{min-height:18px;margin:12px 0 0;font-size:13px;color:#ff9d9d}
+      </style>
+      <div class="gate-box">
+        <p class="gate-mark">WHITE ATELIER · 白相</p>
+        <h1 class="gate-title">私人展室</h1>
+        <p class="gate-hint">请输入访问密码进入</p>
+        <input
+          id="gate-password"
+          class="gate-input"
+          type="password"
+          placeholder="访问密码"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+        />
+        <button id="gate-btn" class="gate-btn" type="button">进入展室</button>
+        <p id="gate-msg" class="gate-msg"></p>
+      </div>
+    </div>
     <header class="masthead">
       <a class="wordmark" href="./" aria-label="白相首页"
         ><span class="wordmark-cn">白相<span class="brand-dot"></span></span
@@ -209,6 +229,64 @@
       </dl>
     </dialog>
     <div id="notice" role="status" class="notice" hidden></div>
-    <script type="module" src="./app.bundle.v3.js"></script>
+    <script>
+      (function () {
+        var PASSWORDS = [
+          "63b8538a9faf326de13249c0d50f3b38a4da16756113e1adf3c9c7e7551017c9",
+          "25f5bb792ffc08dd1bc21c51600f4760f14140fb7d8e565de9b8d4f7821e557b"
+        ];
+        var gate = document.getElementById("gate");
+        var input = document.getElementById("gate-password");
+        var msg = document.getElementById("gate-msg");
+        var btn = document.getElementById("gate-btn");
+        function sha256(str) {
+          return crypto.subtle
+            .digest("SHA-256", new TextEncoder().encode(str))
+            .then(function (buf) {
+              return Array.prototype.map
+                .call(new Uint8Array(buf), function (b) {
+                  return b.toString(16).padStart(2, "0");
+                })
+                .join("");
+            });
+        }
+        function unlock() {
+          var v = (input.value || "").trim();
+          if (!v) {
+            msg.textContent = "请输入密码";
+            input.focus();
+            return;
+          }
+          sha256(v).then(function (h) {
+            if (PASSWORDS.indexOf(h) !== -1) {
+              msg.textContent = "";
+              gate.classList.add("gate-open");
+              loadApp();
+              setTimeout(function () {
+                gate.parentNode && gate.parentNode.removeChild(gate);
+              }, 600);
+            } else {
+              msg.textContent = "密码不正确，请重试";
+              input.value = "";
+              input.focus();
+            }
+          });
+        }
+        function loadApp() {
+          var s = document.createElement("script");
+          s.type = "module";
+          s.src = "./app.bundle.v3.js";
+          document.body.appendChild(s);
+        }
+        btn.addEventListener("click", unlock);
+        input.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            unlock();
+          }
+        });
+        input.focus();
+      })();
+    </script>
   </body>
 </html>
