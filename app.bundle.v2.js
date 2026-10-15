@@ -30762,6 +30762,86 @@ function addPrimitiveAttributes(geometry, primitiveDef, parser) {
 
 // icons.data.js
 var ICON_TREES = {
+  "Maximize": [
+    "svg",
+    {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": 24,
+      "height": 24,
+      "viewBox": "0 0 24 24",
+      "fill": "none",
+      "stroke": "currentColor",
+      "stroke-width": 2,
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round"
+    },
+    [
+      [
+        "path",
+        {
+          "d": "M8 3H5a2 2 0 0 0-2 2v3"
+        }
+      ],
+      [
+        "path",
+        {
+          "d": "M21 8V5a2 2 0 0 0-2-2h-3"
+        }
+      ],
+      [
+        "path",
+        {
+          "d": "M3 16v3a2 2 0 0 0 2 2h3"
+        }
+      ],
+      [
+        "path",
+        {
+          "d": "M16 21h3a2 2 0 0 0 2-2v-3"
+        }
+      ]
+    ]
+  ],
+  "Minimize": [
+    "svg",
+    {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": 24,
+      "height": 24,
+      "viewBox": "0 0 24 24",
+      "fill": "none",
+      "stroke": "currentColor",
+      "stroke-width": 2,
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round"
+    },
+    [
+      [
+        "path",
+        {
+          "d": "M8 3v3a2 2 0 0 1-2 2H3"
+        }
+      ],
+      [
+        "path",
+        {
+          "d": "M21 8h-3a2 2 0 0 1-2-2V3"
+        }
+      ],
+      [
+        "path",
+        {
+          "d": "M3 16h3a2 2 0 0 1 2 2v3"
+        }
+      ],
+      [
+        "path",
+        {
+          "d": "M16 21v-3a2 2 0 0 1 2-2h3"
+        }
+      ]
+    ]
+  ],
   "Info": [
     "svg",
     {
@@ -31104,6 +31184,10 @@ var flipped = false;
 var dragging = false;
 var finish = "pearl";
 var zoom = 1;
+var gyroOn = false;
+var fullscreenOn = false;
+var gyroSmooth = { x: 0, y: 0 };
+var GYRO = { maxX: 0.36, maxY: 0.65, range: 40 };
 var targetX = -0.035;
 var targetY = -0.15;
 var lastPointer = { x: 0, y: 0 };
@@ -31762,7 +31846,7 @@ function setupControls() {
     $(id).addEventListener("input", () => updateInput(id, name));
   });
   stage.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || gyroOn) return;
     dragging = true;
     setAuto(false);
     lastPointer = { x: e.clientX, y: e.clientY };
@@ -31859,6 +31943,124 @@ function setupControls() {
     renderer.setAnimationLoop(null);
     notice("\u56FE\u5F62\u663E\u793A\u5DF2\u6682\u505C\uFF0C\u8BF7\u5237\u65B0\u9875\u9762\u6062\u590D");
   });
+  setupGyro();
+  setupFullscreen();
+}
+function requestGyroPermission() {
+  if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function")
+    return DeviceOrientationEvent.requestPermission().then(
+      (state) => state === "granted"
+    );
+  return Promise.resolve(true);
+}
+function onGyro(event) {
+  if (!gyroOn || dragging || !renderer) return;
+  const beta = event.beta ?? 0;
+  const gamma = event.gamma ?? 0;
+  const angle = screen.orientation && screen.orientation.angle || window.orientation || 0;
+  let front = -(beta - 90), side = gamma;
+  switch ((Math.round(angle / 90) * 90 + 360) % 360) {
+    case 90:
+      front = -gamma;
+      side = beta - 90;
+      break;
+    case 180:
+      front = beta - 90;
+      side = -gamma;
+      break;
+    case 270:
+      front = gamma;
+      side = -(beta - 90);
+      break;
+  }
+  gyroSmooth.x += (front - gyroSmooth.x) * 0.22;
+  gyroSmooth.y += (side - gyroSmooth.y) * 0.22;
+  targetX = MathUtils.clamp(-gyroSmooth.x / GYRO.range, -1, 1) * GYRO.maxX;
+  targetY = MathUtils.clamp(gyroSmooth.y / GYRO.range, -1, 1) * GYRO.maxY + (flipped ? Math.PI : 0);
+}
+function setGyro(on) {
+  gyroOn = on;
+  setAuto(false);
+  dragging = false;
+  stage.classList.remove("dragging");
+  const btn = $("gyro-toggle");
+  if (btn) {
+    btn.setAttribute("aria-pressed", String(on));
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-label", on ? "\u5173\u95ED\u9640\u87BA\u4EEA\u63A7\u5236" : "\u5F00\u542F\u9640\u87BA\u4EEA\u63A7\u5236");
+    btn.title = on ? "\u5173\u95ED\u9640\u87BA\u4EEA\u63A7\u5236" : "\u5F00\u542F\u9640\u87BA\u4EEA\u63A7\u5236";
+  }
+  notice(on ? "\u9640\u87BA\u4EEA\u5DF2\u5F00\u542F\uFF1A\u8F6C\u52A8\u624B\u673A\u5373\u53EF\u7FFB\u8F6C\u5361\u724C" : "\u9640\u87BA\u4EEA\u5DF2\u5173\u95ED");
+}
+function setupGyro() {
+  const btn = $("gyro-toggle");
+  if (!btn) return;
+  const touchOnly = matchMedia("(pointer: coarse)").matches;
+  if (!("ondeviceorientation" in window) || !touchOnly) {
+    btn.hidden = true;
+    return;
+  }
+  btn.addEventListener("pointerdown", (e) => e.stopPropagation());
+  btn.addEventListener("click", async () => {
+    if (gyroOn) {
+      setGyro(false);
+      return;
+    }
+    const granted = await requestGyroPermission();
+    if (!granted) {
+      notice("\u672A\u83B7\u5F97\u9640\u87BA\u4EEA\u6743\u9650\uFF0C\u8BF7\u5728\u6D4F\u89C8\u5668\u8BBE\u7F6E\u4E2D\u5141\u8BB8");
+      return;
+    }
+    setGyro(true);
+    window.addEventListener("deviceorientation", onGyro, { passive: true });
+  });
+}
+function enterCardFullscreen() {
+  const el = document.documentElement;
+  if (typeof el.requestFullscreen === "function") {
+    el.requestFullscreen().then(() => setCardFullscreen(true)).catch(() => setCardFullscreen(true));
+  } else {
+    setCardFullscreen(true);
+  }
+}
+function exitCardFullscreen() {
+  if (document.fullscreenElement && typeof document.exitFullscreen === "function")
+    document.exitFullscreen().catch(() => {
+    });
+  setCardFullscreen(false);
+}
+function syncFullscreen() {
+  setCardFullscreen(
+    !!document.fullscreenElement || !!document.webkitFullscreenElement
+  );
+}
+function setCardFullscreen(on) {
+  document.body.classList.toggle("card-fullscreen", on);
+  fullscreenOn = on;
+  const btn = $("fullscreen-toggle");
+  if (btn) {
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-pressed", String(on));
+    btn.setAttribute("aria-label", on ? "\u9000\u51FA\u5168\u5C4F" : "\u5168\u5C4F\u663E\u793A");
+    btn.title = on ? "\u9000\u51FA\u5168\u5C4F" : "\u5168\u5C4F\u663E\u793A";
+    btn.replaceChildren();
+    const icon = document.createElement("i");
+    icon.setAttribute("data-lucide", on ? "minimize" : "maximize");
+    btn.append(icon);
+    refreshIcons();
+  }
+  requestAnimationFrame(resize);
+}
+function setupFullscreen() {
+  const btn = $("fullscreen-toggle");
+  if (!btn) return;
+  btn.addEventListener("pointerdown", (e) => e.stopPropagation());
+  btn.addEventListener("click", () => {
+    if (fullscreenOn) exitCardFullscreen();
+    else enterCardFullscreen();
+  });
+  document.addEventListener("fullscreenchange", syncFullscreen);
+  document.addEventListener("webkitfullscreenchange", syncFullscreen);
 }
 function saveCard() {
   try {
@@ -31950,12 +32152,6 @@ Promise.race([
 /*! Bundled license information:
 
 three/build/three.core.js:
-  (**
-   * @license
-   * Copyright 2010-2025 Three.js Authors
-   * SPDX-License-Identifier: MIT
-   *)
-
 three/build/three.module.js:
   (**
    * @license
