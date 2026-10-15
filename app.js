@@ -926,7 +926,7 @@ const fail = (message) => {
   loading?.append(msg, retry);
   window.__holo = { ready: false, error: message };
 };
-const LOAD_TIMEOUT_MS = 12000;
+const LOAD_TIMEOUT_MS = 40000;
 let settled = false;
 Promise.race([
   init().then(() => {
