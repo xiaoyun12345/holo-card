@@ -181,6 +181,36 @@ button svg {
   height: 100%;
   display: block;
 }
+/* Floating control buttons inside the stage (陀螺仪 / 全屏) — stay visible
+   in fullscreen mode because they live in the stage itself. */
+.stage-floats {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 6;
+  pointer-events: none;
+}
+.stage-floats .float-btn {
+  pointer-events: auto;
+}
+.float-btn {
+  background: rgba(24, 28, 24, 0.55);
+  color: #e6e7e1;
+  border: 1px solid rgba(230, 231, 225, 0.22);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.float-btn:hover:not(:disabled) {
+  background: rgba(50, 55, 50, 0.7);
+  color: white;
+}
+.float-btn.active {
+  background: #e8c56a;
+  color: #1a1e18;
+  border-color: rgba(232, 197, 106, 0.8);
+}
 /* CSS-3D fallback card (WebGL unavailable): layered 3D without the engine.
    background/effects/subject/text float at their own translateZ offsets, the
    whole card tilts under the pointer and flips to a gold back. */
@@ -877,4 +907,27 @@ dialog dd {
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+/* --- 全屏显示模式 ---
+   原生 Fullscreen API（Android / Chrome / Firefox）与 iOS Safari 的
+   CSS 兜底共用同一套 class：隐藏页面其它 UI，把 gallery+stage 铺满视口。 */
+.card-fullscreen .masthead,
+.card-fullscreen .artwork-bar,
+.card-fullscreen .footer,
+.card-fullscreen .stage-note,
+.card-fullscreen .parameter-panel,
+.card-fullscreen #notice {
+  display: none !important;
+}
+.card-fullscreen .gallery {
+  position: fixed;
+  inset: 0;
+  height: 100svh;
+  max-height: none;
+  min-height: 0;
+  z-index: 9999;
+  background: #0b0f0b;
+}
+.card-fullscreen .stage {
+  inset: 0;
 }
