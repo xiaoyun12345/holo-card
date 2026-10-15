@@ -31930,7 +31930,7 @@ var fail = (message) => {
   loading2?.append(msg, retry);
   window.__holo = { ready: false, error: message };
 };
-var LOAD_TIMEOUT_MS = 12e3;
+var LOAD_TIMEOUT_MS = 4e4;
 var settled = false;
 Promise.race([
   init().then(() => {
