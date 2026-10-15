@@ -8,7 +8,7 @@
   "description": "以参考立绘生成的 3D 视差镭射卡：主体凸起、背景下沉、流光随视角转动。",
   "font": "C:/Windows/Fonts/simkai.ttf",
   "assets": {
-    "subject": "./assets/subject.png",
+    "subject": "./assets/subject.webp",
     "background": "./assets/background.png",
     "text": "./assets/text.png",
     "lineart": "./assets/lineart.png",
